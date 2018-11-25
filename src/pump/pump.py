@@ -1,4 +1,5 @@
 from imapclient import IMAPClient
+import email
 
 
 class EmailPump:
@@ -13,8 +14,15 @@ class EmailPump:
 
     def get_emails(self, criteria):
         messages = self.client.search(criteria)
-        for msgid, data in self.client.fetch(messages, ['ENVELOPE'], ).items():
-            yield data[b'ENVELOPE']
+        for msgid, data in self.client.fetch(messages, ['ENVELOPE', 'RFC822', 'BODY[TEXT]']).items():
+            parsedEmail = email.message_from_string(data[b'RFC822'].decode())
+            body = email.message_from_string(data[b'BODY[TEXT]'].decode())
+            if parsedEmail.is_multipart():
+                parsedBody = parsedEmail.get_payload(0)
+            else:
+                parsedBody = parsedEmail.get_payload()
+                
+            yield data[b'ENVELOPE'], parsedBody
 
     
 
